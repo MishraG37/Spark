@@ -1,0 +1,32 @@
+groupByKey() is just to group your dataset based on a key. It will result in data shuffling when RDD is not already partitioned.
+
+reduceByKey() is something like grouping + aggregation. We can say reduceByKey() equivalent to dataset.group(...).reduce(...). It will shuffle less data unlike groupByKey().
+
+aggregateByKey() is logically same as reduceByKey() but it lets you return result in different type. In another words, it lets you have an input as type x and aggregate result
+as type y. For example (1,2),(1,4) as input and (1,"six") as output.It also takes zero-value that will be applied at the beginning of each key.
+Note: One similarity is they all are wide operations.
+
+
+
+==========================================================================================================================
+ReduceByKey reduceByKey(func, [numTasks])-
+
+
+Data is combined so that at each partition there should be at least one value for each key. And then shuffle happens and it is sent over the network to some
+particular executor for some action such as reduce.
+
+GroupByKey - groupByKey([numTasks])
+
+It doesn't merge the values for the key but directly the shuffle process happens and here lot of data gets sent to each partition, almost same as the initial data.
+
+And the merging of values for each key is done after the shuffle. Here lot of data stored on final worker node so resulting in out of memory issue.
+
+AggregateByKey - aggregateByKey(zeroValue)(seqOp, combOp, [numTasks]) It is similar to reduceByKey but you can provide initial values when performing aggregation.
+
+Use of reduceByKey
+
+reduceByKey can be used when we run on large data set.
+
+reduceByKey when the input and output value types are of same type over aggregateByKey
+
+Moreover it recommended not to use groupByKey and prefer reduceByKey. 
