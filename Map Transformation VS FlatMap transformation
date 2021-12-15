@@ -1,0 +1,23 @@
+MAP(func)
+Map transformation returns a new RDD by applying a function to each element of this RDD
+>>> baby_names = sc.textFile(“baby_names.csv”)
+>>> rows = baby_names.map(lambda line: line.split(“,”))
+So, in this transformation example, we’re creating a new RDD called “rows” by splitting every row in the baby_names RDD. 
+We accomplish this by mapping over every element in baby_names and passing in a lambda function to split by commas. From here, we could use Python to access the array
+>>> for row in rows.take(rows.count()): print(row[1])
+First Name
+DAVID
+JAYDEN
+
+=========================================================================================================================================================
+FLATMAP(func)
+flatMap is similar to map, because it applies a function to all elements in a RDD. But, flatMap flattens the results.
+Compare flatMap to map in the following
+>>> sc.parallelize([2, 3, 4]).flatMap(lambda x: [x,x,x]).collect()
+[2, 2, 2, 3, 3, 3, 4, 4, 4]
+>>> sc.parallelize([1,2,3]).map(lambda x: [x,x,x]).collect()
+[[1, 1, 1], [2, 2, 2], [3, 3, 3]]
+This is helpful with nested datasets such as found in JSON.
+Adding collect to flatMap and map results was shown for clarity. We can focus on Spark aspect (re: the RDD return type) of the example if we don’t use collect:
+>>> sc.parallelize([2, 3, 4]).flatMap(lambda x: [x,x,x])
+PythonRDD[36] at RDD at PythonRDD.scala:43
