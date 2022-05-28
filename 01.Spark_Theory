@@ -1,0 +1,1650 @@
+SPARK CORE
++- Spark SQL
++- Spark Streaming ==>kafka
++- MLLib
++- GraphX
+
++- Spark itself is written in Scala
++- Scala's functional programming model is a good fit for distributed processing
++- Gives you fast performance (Scala compiles to Java bytecode)
++- Less code & boilerplate stuff than Java
++- Python is slow in comparison
+
+RDD.scala:
+the basic abstraction in Spark
+Represents an immutable,
+partitioned collection of elements that can be operated on in parallel
+basic operations available on all RDDs
+map
+filter
+persist`
+available only on RDDs of key-value
+ * pairs, such as `groupByKey` and `join`
+ *available only on RDDs Doubles
+
+Spark RDD API introduces few  operations
+Transformations and few Actions to manipulate RDD.
+
+map(func)
+filter(func)
+flatMap(func)
+mapPartitions(func)
+mapPartitionsWithIndex(func)
+sample(withReplacement, fraction, seed)
+union(otherDataset)
+intersection(otherDataset)
+distinct([numTasks])
+groupByKey([numTasks])
+reduceByKey(func, [numTasks])
+aggregateByKey(zeroValue)(seqOp, combOp, [numTasks])
+sortByKey([ascending], [numTasks])
+join(otherDataset, [numTasks])
+cogroup(otherDataset, [numTasks])
+cartesian(otherDataset)
+pipe(command, [envVars])
+coalesce(numPartitions)
+repartition(numPartitions)
+repartitionAndSortWithinPartitions(partitioner)
+
+Actions:
+reduce(func)
+collect()
+count()
+first()
+take(n)
+takeSample (withReplacement,num, [seed])
+takeOrdered(n, [ordering])
+saveAsTextFile(path)
+saveAsSequenceFile(path) (Java and Scala)
+saveAsObjectFile(path) (Java and Scala)
+countByKey()
+foreach(func)
+
+scala> counts.toDebugString
+scala> counts.cache()
+scala> counts.saveAsTextFile("output")
+
+Numeric RDD Operations:
+count()
+Mean()
+Sum()
+Max()
+Min()
+Variance()
+Stdev()
+
+A Resilient Distributed Dataset (RDD), 
+the basic abstraction in Spark. 
+Represents an immutable,
+ * partitioned collection of elements that can be operated on in parallel. 
+ This class contains the basic operations available on all RDDs, such as `map`, `filter`, and `persist`.
+
+Internally, each RDD is characterized by five main properties:
+
+*A list of partitions
+*A function for computing each split
+*A list of dependencies on other RDDs
+*Optionally, a Partitioner for key-value RDDs 
+(e.g. to say that the RDD is hash-partitioned)
+*Optionally, a list of preferred locations to compute each split on 
+(e.g. block locations for an HDFS file).
+
+
+// Run from spark-submit
+    val conf = new SparkConf().setAppName("WordCount") // SparkException: A master URL must be set in your configuration
+
+    // Create a Scala Spark Context.
+    val sc = new SparkContext(conf)
+    // Load our input data.
+    val input =  sc.textFile(inputFile)
+    // Split up into words.
+    val words = input.flatMap(line => line.split(" "))
+    // Transform into word and count.
+    val counts = words.map(word => (word, 1)).reduceByKey{case (x, y) => x + y}
+    // Save the word count back out to a text file, causing evaluation.
+    counts.saveAsTextFile(outputFile)
+    // Stop Spark
+    sc.stop()
+    // Exit
+    sys.exit()
+
+
+
+
+
+
+
+
+
+RDD vs                       Dataframe vs                       DataSet
+*unstructured data,      *equal to a table in RDMS        *semi-structured&structureddata. 
+binary(media)streams    structured (RDBMS input)          *It is an extension to Dataframe API
+                        or semi-structured (json, csv)    *provide best of both RDD and Dataframe.
+    1.0                          1.3                           1.6
+                         *named rdd & schema rdd          *additional feature it has: Encoders				
+*lower performance       *Optimized execution plans       *
+*more effort req to      *Custom Memory management
+speed up data processing    val df = rdd.toDF()
+SparkContext.parallelize    val df = spark.read.json(or).csv.(or).parquet("filename")
+(test or POC perpose)       val df= spark.read.jdbc
+                               (url,"person",prop)
+*Read from externalsources  rdd to df =>programmatically 
+                              specifying the schema.
+							  
+*functional prgmng.          *relational
+*type safe                   *JIT code generation
+*RDD is lazily evaluated     *sorting/suffling with out 
+*Fault tolerant				   deserializing.
+							 *Distributed collection of Row Object
+
+
+							  
+RDD
+===============
+=>your data is unstructured, for example, binary (media) streams or text streams
+=>you want to control your dataset and use low-level transformations and actions
+=>your data types cannot be serialized with Encoders 
+(an optimized approach that uses runtime code generation to build custom bytecode for 
+serialization and deserialization)
+=>you are ok to miss optimizations for DataFrames and Datasets 
+for structured and semi-structured data that are available out of the box
+=>you don’t care about the schema, columnar format and ready to use functional programming constructs
+
+DataFrame
+================
+=>your data is structured (RDBMS input) or semi-structured (json, csv)
+=>you want to get the best performance gained from SQL’s optimized execution engine 
+(Catalyst optimizer and Tungsten’s efficient code generation)
+=>you need to run hive queries
+=>you appreciate domain specific language API (.groupBy, .agg, .orderBy)
+=>you are using R or 
+Python
+
+Dataset
+========
+=>your data is structured or semi-structured
+=>you appreciate type-safety at a compile time and a strong-typed API
+=>you need good performance (mostly greater than RDD), but not the best one (usually lower than DataFrames)
+=>It is an extension to Dataframe API, the latest abstraction which tries to provide 
+best of both RDD and Dataframe.
+=>comes with OOPs style and developer friendly compile time safety like RDD as well 
+as performance boosting features of 
+Dataframe : Catalyst optimiser and custom memory management.
+=>How dataset scores over Dataframe is an additional feature it has: Encoders
+=>Encoders act as interface between JVM objects and off-heap custom memorybinaryformatdata. 
+=>Encoders generate byte code to interact with off-heap data 
+and provide on-demand access to individual attributes without having to 
+de-serialize an entire object.
+=>case class is used to define the structure of data schema in Dataset. 
+=>Using case class, its very easy to work with dataset. 
+Names of different attributes in case class is directly mapped to field names in Dataset . 
+It gives feeling like working with RDD but actually underneath it works same as Dataframe.
+=>Dataframe is infact treated as dataset of generic row objects.DataFrame=Dataset[Row] . 
+So we can always convert a data frame at any point of time into a dataset by calling ‘as’
+ method on Dataframe.    	
+ e.g.  df.as[MyClass]
+
+
+					  
+							 
+When should I use DataFrames or Datasets?
+==========================================
+=>If you want rich semantics(logic), high-level abstractions, 
+and domain specific APIs, use DataFrame or Dataset.
+=>If your processing demands high-level expressions, 
+filters, maps, aggregation, averages, sum, SQL queries, 
+columnar access and use of lambda functions on semi-structured data, 
+use DataFrame or Dataset.
+=>If you want higher degree of type-safety at compile time, want typed JVM objects, 
+take advantage of Catalyst optimization, and benefit from Tungsten’s efficient code generation, use Dataset.
+=>If you want unification and simplification of APIs across Spark Libraries, 
+use DataFrame or Dataset.
+=>If you are a R user, use DataFrames.
+=>If you are a Python user, use DataFrames and resort back to RDDs if you need more control.
+Note that you can always seamlessly interoperate or convert from DataFrame and/or Dataset to an RDD, by simple method call .rdd. For instance,	
+							  
+							  
+						
+Spark Core
+=============
+==>The main feature of Spark is its in-memory cluster computing 
+that increases the processing speed of an application. 
+To run these operations, driver programs typically manage a number of nodes called
+executors.
+
+
+
+==>It runs on top of existing hadoop cluster and access hadoop data store 
+(HDFS), can also process structured data in Hive and 
+Streaming data from HDFS,Flume,Kafka,Twitter.
+
+Features of Apache Spark:
+Speed
+Ease of Use
+Combines SQL, streaming, and complex analytics.
+Advanced Analytics
+A Unified Engine
+Runs Everywhere
+
+Note: Only one SparkContext may be active per JVM. 
+You must stop() the active SparkContext before creating a new one.
+.
+
+RDDs:
+immutable distributed collection of objects.
+Each RDD is split into multiple partitions, which may be computed on different
+ nodes of the cluster. 
+Optimized Row Columnar:
+
+
+ 
+ 
+ 
+ Spark Clusters:
+==>Each program we will write is a Driver Program.
+==>It uses a SparkContext to communicate with the Cluster Manager.
+==>which is an abstraction over Hadoop YARN, Mesos, standalone (static cluster) mode, EC2, 
+and local mode.
+==>The Cluster Manager allocates resources
+==>JVM process is created on each worker node per client application.
+==>It manages local resources, such as the cache (see below) and it runs tasks, 
+which are provided by your program in the form of Java jar files or Python scripts.
+==>Because each application has its own executor process per node, 
+applications canot share data through the Spark Context. 
+External storage has to be used (e.g., the file system, a database, 
+a message queue, etc.).
+==>The data caching is one of the key reasons that Sparks performance is 
+considerably better than the performance of MapReduce.
+==>
+
+Spark Core contains the basic functionality of Spark
+  *task scheduling
+  *memory management
+  *fault recovery
+  *interacting with storage systems
+  *RDDs
+  
+  
+  lazy val sparkContext = new SparkContext(conf)
+  lazy val sparkSQLContext = SQLContext.getOrCreate(sparkContext)
+  lazy val stre
+  amingContext = StreamingContext.getActive()
+    .getOrElse(new StreamingContext(sparkContext, Seconds(2)))
+
+//Creating DataFrames from RDDs
+//Create a list of colours
+Scala> val colors = List("white","green","yellow","red","brown","pink")
+//Distribute a local collection to form an RDD
+//Apply map function on that RDD to get another RDD containing colour, 
+length tuples
+Scala> val color_df = sc.parallelize(colors).map(x
+          => (x,x.length)).toDF("color","length")
+
+Scala> color_df
+res0: org.apache.spark.sql.DataFrame = [color: string, length: int]
+
+Scala> color_df.dtypes   //Note the implicit type inference  
+res1: Array[(String, String)] = Array((color,StringType), (length,IntegerType))
+
+Scala> color_df.show() ()//Final output as expected. Order need not be the same as shown
++------+------+
+| color|length|
++------+------+
+| white|     5|
+| green|     5|
+|yellow|     6|
+|   red|     3|
+| brown|     5|
+|  pink|     4|
++------+------+
+//Creating DataFrames from JSON
+//Pass the source json data file path
+//Note: SQLCONTEXT is deprecated in Spark 2+ so use spark as entry point
+// or create sqlContext as shown
+//val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+Scala> val df = spark.read.json("./authors.json")
+Scala> df.show() //json parsed; Column names and data types inferred implicitly
++----------+---------+
+|first_name|last_name|
++----------+---------+
+|      Mark|    Twain|
+|   Charles|  Dickens|
+|    Thomas|    Hardy|
++----------+---------+
+
+/usr/bin/mysql -u demouser
+//The following example assumes MYSQL is already running and the required library is imported
+//Launch shell with driver-class-path as a command line argument
+spark-shell --driver-class-path /usr/share/java/mysql-connector-java.jar
+//Pass the connection parameters
+scala> scala> val peopleDF = sqlContext.read.format("jdbc").options(
+                 Map("url" -> "jdbc:mysql://localhost/demodb",
+                     "dbtable" -> "authors",
+                    "user" -> "demouser",
+                    "password" -> "demopassword")).load()
+peopleDF: org.apache.spark.sql.DataFrame = [first_name: string, last_name: string, gender: string, dob: date, occupation: string, person_id: int]
+//Retrieve table data as a DataFrame
+scala> peopleDF.show()
++----------+---------+------+----------+----------+---------+
+|first_name|last_name|gender|       dob|occupation|person_id|
++----------+---------+------+----------+----------+---------+
+|    Thomas|    Hardy|     M|1840-06-02|    Writer|      101|
+|     Emily|   Bronte|     F|1818-07-30|    Writer|      102|
+| Charlotte|   Bronte|     F|1816-04-21|    Writer|      103|
+|   Charles|  Dickens|     M|1812-02-07|    Writer|      104|
++----------+---------+------+----------+----------+---------+
+	
+//Creating DataFrames from Apache Parquet
+//Write DataFrame contents into Parquet format
+scala> peopleDF.write.parquet("writers.parquet")
+//Read Parquet data into another DataFrame
+scala> val writersDF = sqlContext.read.parquet("writers.parquet") 
+writersDF: org.apache.spark.sql.DataFrame = [first_name: string, last_name: string, gender: string, dob: date, occupation: string, person_id: int]
+
+
+========================================================================================================================================
+//DataFrame operations
+========================================================================================================================================
+//Create a local collection of colors first
+Scala> val colors = List("white","green","yellow","red","brown","pink")
+//Distribute a local collection to form an RDD
+//Apply map function on that RDD to get another RDD containing color, length tuples and convert that RDD to a DataFrame
+Scala> val color_df = sc.parallelize(colors).map(x
+          => (x,x.length)).toDF("color","length")
+//Check the object type
+Scala> color_df
+res0: org.apache.spark.sql.DataFrame = [color: string, length: int]
+//Check the schema
+Scala> color_df.dtypes
+res1: Array[(String, String)] = Array((color,StringType), (length,IntegerType))
+//Check row count
+Scala> color_df.count()
+res4: Long = 6
+//Look at the table contents. You can limit displayed rows by passing parameter to show
+Scala> color_df.show()
++------+------+
+| color|length|
++------+------+
+| white|     5|
+| green|     5|
+|yellow|     6|
+|   red|     3|
+| brown|     5|
+|  pink|     4|
++------+------+
+//List out column names
+Scala> color_df.columns
+res5: Array[String] = Array(color, length)
+//Drop a column. The source DataFrame color_df remains the same.
+//Spark returns a new DataFrame which is being passed to show
+Scala> color_df.drop("length").show()
++------+
+| color|
++------+
+| white|
+| green|
+|yellow|
+|   red|
+| brown|
+|  pink|
++------+
+//Convert to JSON format
+Scala> color_df.toJSON.first()
+res9: String = {â€œcolorâ€�:â€�whiteâ€�,â€�lengthâ€�:5}
+
+
+//filter operation is similar to WHERE clause in SQL
+//You specify conditions to select only desired columns and rows
+//Output of filter operation is another DataFrame object that is usually passed on to some more operations
+//The following example selects the colors having a length of four or five only and label the column as â€œmid_lengthâ€�
+filter
+------
+Scala> color_df.filter(color_df("length").between(4,5)).select(
+         color_df("color").alias("mid_length")).show()
++----------+
+|mid_length|
++----------+00
+|     white|
+|     green|
+|     brown|
+|      pink|
++----------+
+
+
+//This example uses multiple filter criteria. 
+Notice the not equal to operator having double equal to symbols 
+Scala> color_df.filter(color_df("length") > 4).filter(color_df("color")!== "white").show()
++------+------+
+| color|length|
++------+------+
+| green|     5|
+|yellow|     6|
+| brown|     5|
++------+------+
+//Sort the data on one or more columns
+sort
+----
+//A simple single column sorting in default (ascending) order
+Scala> color_df.sort("color").show()
++------+------+                                                                 
+| color|length|
++------+------+
+| brown|     5|
+| green|     5|
+|  pink|     4|
+|   red|     3|
+| white|     5|
+|yellow|     6|
++------+------+
+//First filter colors of length more than 4 and then sort on multiple columns
+//The filtered rows are sorted first on the column length in default ascending order. 
+Rows with same length are sorted on color in descending order 
+Scala> color_df.filter(color_df("length")>=4).sort($"length", $"color".desc).show()
++------+------+
+| color|length|
++------+------+
+|  pink|     4|
+| white|     5|
+| green|     5|
+| brown|     5|.
+|yellow|     6|
++------+------+
+//You can use orderBy instead, which is an alias to sort.
+scala> color_df.orderBy("length","color").take(4)
+res19: Array[org.apache.spark.sql.Row] = Array([red,3], [pink,4], [brown,5], [green,5])
+//Alternative syntax, for single or multiple columns
+scala> color_df.sort(color_df("length").desc, color_df("color").asc).show()
++------+------+
+| color|length|
++------+------+
+|yellow|     6|
+| brown|     5|
+| green|     5|
+| white|     5|
+|  pink|     4|
+|   red|     3|
++------+------+
+//All the examples until now have been acting on one row at a time,
+ filtering or transforming or reordering.
+//The following example deals with regrouping the data. 
+//These operations require â€œwide dependencyâ€� and often involve shuffling.
+groupBy
+-------
+Scala> color_df.groupBy("length").count().show()
++------+-----+
+|length|count|
++------+-----+
+|     3|    1|
+|     4|    1|
+|     5|    3|
+|     6|    1|
++------+-----+
+//Data often contains missing information or null values. 
+//The following json file has names of famous authors. 
+Firstname data is missing in one row.
+dropna
+------
+Scala> val df1 = sqlContext.read.json("./authors_missing.json")
+Scala> df1.show().
++----------+---------+
+|first_name|last_name|
++----------+---------+
+|      Mark|    Twain|
+|   Charles|  Dickens|
+|      null|    Hardy|
++----------+---------+
+//Let us drop the row with incomplete information
+Scala> val df2 = df1.na.drop()
+Scala> df2.show()  //Unwanted row is dropped
++----------+---------+
+|first_name|last_name|
++----------+---------+
+|      Mark|    Twain|
+|   Charles|  Dickens|
++----------+---------+
+
+val spark = SparkSession.builder.getOrCreate
+
+val df = Seq(
+    ("first", 2.0),
+    ("test", 1.5),
+    ("choose", 8.0)
+  ).toDF("id", "val")
+  
+  df.select("id").collect().map(_(0)).toList
+  
+  df.select("id").rdd.map(r => r(0)).collect.toList
+
+  df.select("id").map(r => r.getString(0)).collect.toList
+  
+  
+  
+  val df = sc.textFile("path")
+df.count()
+df.show()
+df.printSchema()
+df.first()
+df.select($"name").show()
+df.select("name").show(5)
+df.select("date").show()
+df.filter(df.name == "suresh").count()
+df.select(df("age")+1)
+df.filter(df("age")>19)
+df.groupBy(df("name").min())
+dfCustomers.filter(dfCustomers("customer_id").equalTo(500)).show()
+dfCustomers.groupBy("zip_code").count().show()
+data.groupBy('Product_ID).sum('Score)
+
+Creating DataFrame using Case Classes in Scala
+============================================
+scala>case class Person(name: String, age: Int)
+scala> val people = Seq(Person("Jacek", 42), Person("Patryk", 19), Person("Maksym", 5))
+ val df = spark.createDataFrame(people)
+
+ 
+scala> val noheader = lines.filter(_ != header)===>csv files
+scala> val auctions = noheader.map(_.split(",")).map(r => Auction(r(0), r(1).toFloat, r(2).toFloat, r(3), r(4).toInt, r(5).toFloat, r(6).toFloat))
+scala> val df = auctions.toDF
+scala> auctions.groupBy("bidder").count().show(5)
+scala>auctions.groupBy("bidder").count().sort($"count".desc).show(5)
+scala> auctions.groupBy("bidder").count().sort(desc("count")).show(5)
+df.select("auctionid").distinct.count
+scala> df.registerTempTable("auctions") (1)
+scala> val sql = spark.sql("SELECT count(*) AS count FROM auctions")
+scala> df.filter($"name".like("a%")).show
+df1 = diamonds.groupBy("cut", "color").avg("price") # a simple grouping
+display(markets.groupBy("State").count())
+df2 = df1
+  .join(diamonds, on='color', how='inner')\
+  .select("`avg(price)`", "carat")
+# a simple join and selecting some columns
+
+
+Five Spark SQL Utility Functions to Extract and Explore Complex Data Types
+============================================================================
+
+*)five Spark SQL utility functions and APIs. Introduced in Apache Spark 2.x as part of 
+
+==>org.apache.spark.sql.functions, they enable developers to easily work with 
+complex data or nested data types.
+==>which data are JSON objects with complex and nested structures: 
+Map and Structs embedded as JSON.
+
+Spark SQL functions:
+get_json_object()
+from_json()
+to_json()
+explode()
+selectExpr()
+  
+    ##################### SPARK SQl @@@@@@@@@@@@@@@@@@@@@@@@@
+
+	Spark SQL:
+  
+  ==>Spark SQL is a component on top of Spark Core.
+  ==>introduces a new data abstraction called SchemaRDD
+  ==>which provides support for structured and semi-structured data.
+  ==>Spark SQL is to execute SQL queries written using either 
+	a basic SQL syntax or HiveQL.
+ ==>Spark SQL makes it both easier and more efficient to load and query.
+ ==>There are several ways to interact with Spark SQL
+      * SQL
+      * DataFrames API
+	  * Datasets API
+	   
+	  
+	  
+  ==>computing a result the same execution engine is used, 
+    independent of which API/language you are using to express the computation.	  
+	  
+   Create SQL Context:
+   
+   ==>To create a basic SQLContext, you need is a SparkContext. 
+   
+    val sc = SparkCommon.sparkContext
+	val sqlContext = new org.apache.sparl.sql.SqlContext(sc)
+	
+	
+Basic Query:SQL
+
+==>Spark SQL can load JSON files and infer the schema based on that data
+==>Load the json files
+==>register the data in the temp table
+==>print schema of the table
+==>To make a query against a table, we call the sql() method on the SQLContext.
+==>first thing we need to do is tell Spark SQL about some data to query.
+
+==>we will load some Cars data from JSON, and give it a name by registering 
+it as a “Cars1” so we can query it with SQL.
+
+ cars.json
+
+[{"itemNo" : 1, "name" : "ferrari", "speed" : 259 , "weight": 800}, 
+ {"itemNo" : 2, "name" : "jaguar", "speed" : 274 , "weight":998},  
+
+ {"itemNo" : 3, "name" : "mercedes", "speed" : 340 , "weight": 1800},  
+ {"itemNo" : 4, "name" : "audi", "speed" : 345 , "weight": 875}, 
+ {"itemNo" : 5, "name" : "lamborghini", "speed" : 355 , "weight": 1490},
+ {"itemNo" : 6, "name" : "chevrolet", "speed" : 260 , "weight": 900},
+ {"itemNo" : 7, "name" : "ford", "speed" : 250 , "weight": 1061}, 
+ {"itemNo" : 8, "name" : "porche", "speed" : 320 , "weight": 1490}, 
+ {"itemNo" : 9, "name" : "bmw", "speed" : 325 , "weight": 1190},
+ {"itemNo" : 10, "name" : "mercedes-benz", "speed" : 312 , "weight": 1567}] 	
+  
+  val input = sqlContext.read.json(/user/cloudera/suresh/cars1.json)
+	 
+  val result = sqlContext.sql("SELECT * FROM cars1")
+  result.show()
+  val cars =  sqlContext.sql("SELECT COUNT (*) FROM cars1").collect.foreach(println)
+  val result1 = sqlContext.sql("SELECT name, COUNT(*) AS cnt FROM Cars1 WHERE name <> '' GROUP BY name ORDER BY cnt DESC LIMIT 10").collect().foreach(println)
+  
+ DATA FRAME API:
+ 
+ ==>A DataFrame is a distributed collection of data organized into named columns
+ ==>DataFrames can be constructed from a wide array of sources such as
+ 
+     *  structured data files
+	 *  tables in Hive
+	 *  external databases
+	 *  existing RDDs.
+	 
+Creating DataFrame:
+ ==>DF is Distribute collect of data.
+ 
+  val df = sqlContext.read.json("/user/cloudera/suresh/cars.json")
+  df.printSchema()
+  df.dtypes.foreach(println)
+  df.columns.foreach(println)
+  df.show(n) //{ n rows of DataFrame in a tabular}
+  df.show(2)
+  df.take(2).foreach(println)
+  df..+groupBy("speed").count().show()
+  val resultHead = carDataFrame.head() // {head () is used to returns first row.}
+  println(resultHead.mkString(","))
+  val resultHeadNo = carDataFrame.head(3) //three records 
+  println(resultHeadNo.mkString(","))
+  val resultCollect = carDataFrame.collect() //{Returns an array that contains all of Rows in this DataFrame.}
+  println(resultCollect.mkString(","))
+	 
+toDF():
+     ==>toDF() Returns a new DataFrame with columns renamed. 
+     ==>It can be quite convenient in conversion from a RDD of tuples into a DataFrame with meaningful names.
+val rdd = sc.textFile(/user/cloudera/suresh/exp.txt).map(_.split(",")).toDF().show()
+
+
+cache(): 
+explicitly to store the data into memory. 
+Or data stored in a distributed way in the memory by default.
+
+val resultCache = df.filter(df("speed") > 300)
+resultCache.cache().show()
+
+
+Data Frame operations:
+
+sort():
+Returns a new DataFrame sorted by the given expressions.
+df.sort($"itemNo".desc).show()
+
+orderBy():
+Returns a new DataFrame sorted by the specified column(s).
+df.orderBy(desc("speed").show()
+
+groupBy():
+counting the number of cars who are of the same speed .
+df.groupBy("speed").count().show()
+
+
+na():
+Returns a DataFrameNaFunctions for working with missing data.
+df.na.drop().show()
+
+as():
+Returns a new DataFrame with an alias set.
+df.select(avg($"speed").as("avg_speed")).show()
+
+alias():
+Returns a new DataFrame with an alias set. Same as as.
+df.select(avg($"weight").alias("avg_weight")).show()
+
+select():
+To fetch speed-column among all columns from the DataFrame.
+df.select("speed").show()
+
+filter():
+filter the cars whose speed is greater than 300 (speed > 300).
+df.filter(df("speed") > 300).show()
+
+Where():
+Filters age using the given SQL expression.
+df.where($"speed" >300).show()
+
+agg():
+Aggregates on the entire DataFrame without groups.
+df.agg(max($"speed")).show()
+
+limit():
+Returns a new DataFrame by taking the first n rows.
+The difference between this function and 
+head is that head returns an array while limit returns a new DataFrame.
+
+df.limit(3).show()
+
+unionAll():
+Returns a new DataFrame containing union of rows in this frame and another frame.
+df.unionAll(df1).show()
+
+intersect():
+Returns a new DataFrame containing rows only in both this frame and another frame.
+df.intersect(df1).show()
+
+except():
+Returns a new DataFrame containing rows in this frame but not in another frame.
+df.examples(df1).show()
+
+withColumn():
+Returns a new DataFrame by adding a column or replacing the existing column 
+that has the same name.
+
+val coder: (Int ==> String) = (arg: Int) ==> {
+     if (arg < 300) 	"slow" else "high"
+}
+
+val sqlfunc = udf(coder)
+df.withColumn("First", sqlfunc(col("speed"))).show()
+
+withColumnRenamed():
+Returns a new DataFrame with a column renamed.
+df.withColumnRenamed("item" , "caritem").show()
+
+
+drop():
+Returns a new DataFrame with a column dropped.
+df.drop("caritem").show()
+
+dropDuplicates():
+Returns a new DataFrame that contains only the unique rows from this DataFrame. 
+ is an alias for distinct.
+ df.dropDuplicates().show()
+ 
+ describe():
+ describe returns a DataFrame containing information such as number of non-null entries (count),mean, standard deviation, 
+ and minimum and maximum value for each numerical column.
+ df.describe("speed").show()
+ ======================================
+ Interoperating with RDDs:
+ 
+ 
+ SparkSQL supports two different types methods for converting existing RDDs
+ into DataFrames
+ 
+ 1. Inferring the Schema using Reflection:
+ 2. Programmatically Specifying the Schema:
+ 
+ 1. Inferring the Schema using Reflection:
+ -----------------------------------------
+ ==>Spark SQL supports automatically converting an RDD containing case classes to a DataFrame. 
+ ==> The case class defines the schema of the table.
+ ==>The names of the arguments to the case class are read using reflection 
+ and they become the names of the columns.
+ ==>RDD can be implicitly converted to a DataFrame and then be registered as a table. 
+ ==>Tables can be used in subsequent SQL statements.
+ 
+ val fruits = sc.textFile("src/main/resources/fruits.txt")
+      .map(_.split(","))
+      .map(frt => Fruits(frt(0).trim.toInt, frt(1), frt(2).trim.toInt))
+      .toDF()
+	  
+	  fruits.registerTempTable("fruits")
+	  
+	  val records = sqlContext.sql("SELECT * FROM fruits")
+	  records.show()
+	  
+	  
+	 2. Programmatically Specifying the Schema:
+	 
+	 ==>construct a schema and then apply it to an existing RDD.
+	 *)DataFrame can be created programmatically with three steps. 
+	    #We Create an RDD of Rows from an Original RDD. 
+		#Create the schema represented by a StructType matching the structure of Rows in 
+		the RDD created in Step first
+		#Apply the schema to the RDD of Rows via createDataFrame method provided by SQLContext.
+		
+		object ProgrammaticallySchema {
+  val sc = SparkCommon.sparkContext
+  val schemaOptions = Map("header" -> "true", "inferSchema" -> "true")
+
+  //sc is an existing SparkContext.
+  val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+  def main(args: Array[String]) {
+
+    // Create an RDD
+    val fruit = sc.textFile("src/main/resources/fruits.txt")
+
+    // The schema is encoded in a string
+    val schemaString = "id name"
+
+    // Generate the schema based on the string of schema
+    val schema =
+      StructType(
+        schemaString.split(" ").map(fieldName => StructField(fieldName, StringType, true)))
+
+    schema.foreach(println)
+
+    // Convert records of the RDD (fruit) to Rows.
+    val rowRDD = fruit.map(_.split(",")).map(p => Row(p(0), p(1).trim))
+
+    rowRDD.foreach(println)
+
+    // Apply the schema to the RDD.
+    val fruitDataFrame = sqlContext.createDataFrame(rowRDD, schema)
+
+    fruitDataFrame.foreach(println)
+
+    // Register the DataFrames as a table.
+    fruitDataFrame.registerTempTable("fruit")
+
+    /**
+      * SQL statements can be run by using the sql methods provided by sqlContext.
+      */	
+    val results = sqlContext.sql("SELECT * FROM fruit")
+    results.show()
+
+
+  }
+
+
+}
+# Command to query a HIVE table from spark-shell using HIVE context
+sqlContext.sql("select * from department").collect().foreach(println)
+
+# Command to get the count from a HIVE table from spark-shell using HIVE context
+sqlContext.sql("select * from department").count()
+
+
+Data Sources:
+Spark SQL supports a number of structured data sources. 
+These sources include Hive tables, JSON, and Parquet files.
+Spark SQL supports operating on a variety of data sources through the DataFrame interface. 
+A DataFrame can be operated on as normal RDDs and can also be registered as a temporary table. 
+Registering a DataFrame as a table allows you to run SQL queries over its data.
+ 
+DataFrame Operations in JSON file:
+   val sc = SparkCommon.sparkContext
+   val ssc = SparkCommon.sparkSQLContext
+   val schemaOptions = Map("header" -> "true", "inferSchema" -> "true")
+   val cars = "hdfs:cars.json"
+   val carDataFrame: DataFrame = ssc.read.format("json").options(schemaOptions).load(cars)
+    carDataFrame.show()
+	carDataFrame.printSchema()
+	carDataFrame.select("name").show()
+	carDataFrame.filter(empDataFrame("speed") > 300).show()
+	carDataFrame.groupBy("speed").count().show()
+	carDataFrame.show()
+	carDataFrame.select("name").show()
+	carDataFrame.filter(carDataFrame("speed") > 300).show()
+	
+val unionDF = df1.unionAll(df2)
+display(unionDF)	
+	
+Spark and Windowing functions:
+=============================
+Window Functions helps us to compare current row with other rows in the same dataframe.
+calculating running totals , sequencing of events and sessionization of transactions etc.
+
+	
+	
+		
+DataFrame Operations in Text file:	
+-----------------------------------
+fruits.txt
+1, Grapes, 25
+2, Guava, 28
+3, Gooseberry, 39
+4,  Raisins, 23
+5, Naseberry, 23
+
+
+val fruits = sc.textFile("src/main/resources/fruits.txt")
+      .map(_.split(","))
+      .map(frt => Fruits(frt(0).trim.toInt, frt(1), frt(2).trim.toInt))
+      .toDF()
+	  
+	  fruits.registerTempTable("fruits")  //Store the DataFrame Data in a Table//
+	  val records = sqlContext.sql("SELECT * FROM fruits")
+	  records.show()
+
+DataFrame Operations in CSV file :
+---------------------------------
+cars.csv
+year,make,model,comment,blank
+"2012","Tesla","S","No comment",
+
+1997,Ford,E350,"Go get one now they are going fast",
+2015,Chevy,Volt
+
+
+val df = sqlContext.read
+.format("com.databricks.spark.csv")
+.option("header", "true") // Use first line of all files as header
+.option("inferSchema", "true") // Automatically infer data types
+.load("src/main/resources/cars.csv")
+ df.show()
+ df.printSchema()
+
+val selectedData = df.select("year", "model")
+selectedData.write
+.format("com.databricks.spark.csv")
+.option("header", "true")
+.save(s"src/main/resources/${UUID.randomUUID()}")
+  println("OK")
+  
+  
+  
+dataFrame_Train.groupBy("column1", "column2").count().show()
+
+val df = spark.read.format("csv").load("data.txt").toDF("column0","column1","column2","label")
+
+val df2 = df.groupBy("column1","column2").count
+
+val df3 = df.join(df2, Seq("column1","column2"))
+df3.show
+window aggregate functions:
+
+The main difference between groupBy and window aggregations is that the former gives you at most the number of rows as in the source dataset while the latter (window aggregates) gives you exactly the number of rows as in the source dataset
+val columns1and2 = Window.partitionBy("column1", "column2") 
+val counts = ips.withColumn("count", count($"label") over columns1and2)
+counts.show
+
+
+
+
+presented in csv format:
+Lets read those data :
+scala> val df = spark.read.format("csv")
+.load("data.txt")
+.toDF("column0","column1","column2","label")
+We can now perform our group by aggregations :
+val df2 = df.groupBy("column1","column2").count
+All we need to do is an equi-join on the same columns you performed the 
+group by key on :
+val df3 = df.join(df2, Seq("column1","column2"))
+df3.show
+  
+  val data = sqlContext.read.parquet("/tmp/testParquet")	
+  display(data)
+  display(adult_df)
+  
+  
+  
+
+  
+  
+  
+  
+  
+  
+  
+DATA set:
+  
+  Datasets
+---------
+Example 1: Create a Dataset from a simple collection
+
+scala> val ds1 = List.range(1,5).toDS()
+ds1: org.apache.spark.sql.Dataset[Int] = [value: int]
+//Perform an action
+scala> ds1.collect()
+res3: Array[Int] = Array(1, 2, 3, 4)
+
+
+//Create from an RDD
+scala> val colors = List("red","orange","blue","green","yellow")
+scala> val color_ds = sc.parallelize(colors).map(x => (x,x.length)).toDS()
+	 
+	 
+//Add a case class
+case class Color(var color: String, var len: Int) 
+val color_ds = sc.parallelize(colors).map(x => Color(x,x.length)).toDS()
+	 
+
+//Examine the structure
+scala> color_ds.dtypes
+res26: Array[(String, String)] = Array((color,StringType), (len,IntegerType))
+scala> color_ds.schema
+res25: org.apache.spark.sql.types.StructType = StructType(StructField(color,StringType,true),
+StructField(len,IntegerType,false))
+//Examine the execution plan
+scala> color_ds.explain()
+== Physical Plan ==
+Scan ExistingRDD[color#57,len#58]
+
+//Convert the Dataset to a DataFrame
+scala> val color_df = color_ds.toDF()
+color_df: org.apache.spark.sql.DataFrame = [color: string, len: int]
+
+Example 2: Convert the dataset to a DataFrame
+scala> color_df.show()
++------+---+
+| color|len|
++------+---+
+|   red|  3|
+|orange|  6|
+|  blue|  4|
+| green|  5|
+|yellow|  6|
++------+---+
+
+Example 3: Convert a DataFrame to a Dataset
+//Construct a DataFrame first
+scala> val color_df = sc.parallelize(colors).map(x => 
+            (x,x.length)).toDF("color","len")
+color_df: org.apache.spark.sql.DataFrame = [color: string, len: int]
+//Convert the DataFrame to a Dataset with a given Structure
+scala> val ds_from_df = color_df.as[Color]
+ds_from_df: org.apache.spark.sql.Dataset[Color] = [color: string, len: int]
+//Check the execution plan
+scala> ds_from_df.explain
+== Physical Plan ==
+WholeStageCodegen
+:  +- Project [_1#102 AS color#105,_2#103 AS len#106]
+:     +- INPUT
++- Scan ExistingRDD[_1#102,_2#103]
+
+
+//Example 4:  Create a Dataset from json
+//Set filepath
+scala> val file_path = "<Your parh>/authors.json"
+file_path: String = <Your path>/authors.json
+//Create case class to match schema
+scala> case class Auth(first_name: String, last_name: String,books: Array[String])
+defined class Auth
+
+//Create dataset from json using case class
+//Note that the json document should have one record per line
+scala> val auth = spark.read.json(file_path).as[Auth]
+auth: org.apache.spark.sql.Dataset[Auth] = [books: array<string>, firstName: string ... 1 more field]
+
+//Look at the data
+scala> auth.show()
++--------------------+----------+---------+
+|               books|first_name|last_name|
++--------------------+----------+---------+
+|                null|      Mark|    Twain|
+|                null|   Charles|  Dickens|
+|[Jude the Obscure...|    Thomas|    Hardy|
++--------------------+----------+---------+
+
+//Try explode to see array contents on separate lines
+
+scala> auth.select(explode($"books") as "book",
+            $"first_name",$"last_name").show(2,false)
++------------------------+----------+---------+
+|book                    |first_name|last_name|
++------------------------+----------+---------+
+|Jude the Obscure        |Thomas    |Hardy    |
+|The Return of the Native|Thomas    |Hardy    |
++------------------------+----------+---------+
+
+//Example 5: Window example with moving average computation
+
+scala> import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.expressions.Window
+
+//Create a DataFrame containing monthly sales data for two products
+
+scala> val monthlySales = spark.read.options(Map({"header"->"true"},{"inferSchema" -> "true"})).
+                            csv("<Your path>/MonthlySales.csv")
+monthlySales: org.apache.spark.sql.DataFrame = [Product: string, Month: int ... 1 more field]
+
+//Prepare WindowSpec to create a 3 month sliding window for a product
+//Negative subscript denotes rows above current row
+scala> val w = Window.partitionBy(monthlySales("Product")).orderBy(monthlySales("Month")).rangeBetween(-2,0)
+w: org.apache.spark.sql.expressions.WindowSpec = org.apache.spark.sql.expressions.WindowSpec@3cc2f15
+
+//Define compute on the sliding window, a moving average in this case 
+scala> val f = avg(monthlySales("Sales")).over(w)
+f: org.apache.spark.sql.Column = avg(Sales) OVER (PARTITION BY Product ORDER BY Month ASC RANGE BETWEEN 2 PRECEDING AND CURRENT ROW)
+
+//Apply the sliding window and compute. Examine the results
+scala> monthlySales.select($"Product",$"Sales",$"Month",bround(f,2).alias("MovingAvg")).
+                    orderBy($"Product",$"Month").show(6)
++-------+-----+-----+---------+                                                 
+|Product|Sales|Month|MovingAvg|
++-------+-----+-----+---------+
+|     P1|   66|    1|     66.0|
+|     P1|   24|    2|     45.0|
+|     P1|   54|    3|     48.0|
+|     P1|    0|    4|     26.0|
+|     P1|   56|    5|    36.67|
+|     P1|   34|    6|     30.0|
++-------+-----+-----+---------+
+
+
+//Example 6: Streaming example
+//Understand nc
+// Netcat or nc is a networking utility that can be used for creating TCP/UDP connections 
+// -k Forces nc to stay listening for another connection after its current connection is completed.
+
+  
+  ==>Dataset is a new experimental interface that tries to provide the benefits of RDDs (strong typing, ability to use powerful lambda functions)
+  ==>with the benefits of Spark SQL’s optimized execution engine.
+  ==>Dataset can be constructed from JVM objects and then manipulated using functional transformations (map, flatMap, filter, etc.).
+  
+ createing Datasets:
+ ==>strongly-typed
+ ==>immutable collection of objects that are mapped to a relational schema. 
+ ==>Datasets are similar to RDDs, 
+ ==>Dataset API is a new concept called an encoder, 
+ ==>encoder:which is responsible for converting between JVM objects and tabular representation.
+ ==>Dataset support for automatically generating encoders for a wide variety 
+  of types, including primitive types (e.g. String, Integer, Long), 
+  Scala case classes, and Java Beans.
+==>
+
+
+ test_file.txt
+ JSON is a popular semistructured data format. 
+ The simplest way to load JSON data is
+by loading the data as a text file and then mapping over the values with 
+a JSON parser. Likewise, we can use our preferred JSON serialization library
+ to write out the
+values to strings, which we can then write out.
+ In Java and Scala we can also work
+with JSON data using a custom Hadoop format.
+ “JSON” on page 172 also shows how to
+load JSON data with Spark SQL.
+
+val lines = sqlContext.read.text("src/main/resources/test_file.txt").as[String]
+val words = lines
+      .flatMap(_.split(" "))
+      .filter(_ != "")
+      .groupBy(_.toLowerCase)
+      .count()
+      .show()
+
+Basic Opeartion:
+val ds = Seq(Cars("lamborghini", 32)).toDS()
+    ds.show()
+
+DataFrames can be converted to a Dataset by providing a class. 
+Mapping will be done by name
+	
+	  
+val car = sqlContext.read.json("src/main/resources/cars.json").as[Cars]
+car.show()	  
+ 
+ 
+ Data in Kafka is organized into topics that are split into partitions for parallelism
+ As new records arrive to a partition in a Kafka topic, they are assigned a sequential id number 
+ called the offset. 
+ 
+ 
+ 
+ Q)Why does web UI show different durations in Jobs and Stages pages?
+
+Ans:The difference between what you can see in Jobs and Stages pages is the 
+time required to schedule the stage for execution.
+In Spark, a single job can have one or many stages with one or many tasks. 
+That creates an execution plan.
+By default, a Spark application runs in FIFO scheduling mode which is to execute one Spark job at a 
+time regardless of how many cores are in use (you can check it in the web UI Jobs page).
+
+exp:
+file.json
+
+{"time":1469501107,"action":"Open"}
+{"time":1469501147,"action":"Open"}
+{"time":1469501202,"action":"Open"}
+{"time":1469501219,"action":"Open"}
+
+val inputPath = "/databricks-datasets/structured-streaming/events/file.json" 
+[let's define the schema to speed up processing ]
+val jsonSchema = new StructType().add("time", TimestampType).add("action", StringType)
+
+val staticInputDF = 
+  spark
+    .read
+    .schema(jsonSchema)
+    .json(inputPath)
+
+display(staticInputDF)
+
+'"open" and "close" actions with one hour windows'
+
+val staticCountsDF = 
+  staticInputDF
+    .groupBy($"action", window($"time", "1 hour"))
+    .count() 
+
+// Register the DataFrame as table 'static_counts'	
+staticCountsDF.createOrReplaceTempView("static_counts")
+Now we can directly use SQL to query the table
+
+%sql select action, sum(count) as total_count from static_counts group by action
+
+%sql select action, date_format(window.end, "MMM-dd HH:mm") as time, count from static_counts order by time, action
+
+
+Stream Processing
+====================
+val streamingInputDF = 
+  spark
+    .readStream                       // `readStream` instead of `read` for creating streaming DataFrame
+    .schema(jsonSchema)               // Set the schema of the JSON data
+    .option("maxFilesPerTrigger", 1)  // Treat a sequence of files as a stream by picking one file at a time
+    .json(inputPath)
+	
+streamingCountsDF.isStreaming
+res5: Boolean = true
+
+spark.conf.set("spark.sql.shuffle.partitions", "1")  // keep the size of shuffles small
+
+val query =
+  streamingCountsDF
+    .writeStream
+    .format("memory")        // memory = store in-memory table (for testing only in Spark 2.0)
+    .queryName("counts")     // counts = name of the in-memory table
+    .outputMode("complete")  // complete = all the counts should be in the table
+    .start()
+
+Thread.sleep(5000) // wait a bit for computation to start
+%sql select action, date_format(window.end, "MMM-dd HH:mm") as time, count from counts order by time, action	
+	
+
+
+
+SPARK SQL:
+============
+for working with structured and semistructured data. 
+Structured data is any data that has a schema 
+Spark SQL makes it
+both easier and more efficient to load and query.
+
+==>Spark SQL provides three main capabilities
+It provides a DataFrame abstraction in  Scala that simplifies
+working with structured datasets.
+
+==>It can read and write data in a variety of structured formats (e.g., JSON, Hive
+Tables, and Parquet).	
+
+==>Spark SQL through standard database connectors
+(JDBC/ODBC), such as business intelligence tools like Tableau.
+
+==>Spark SQL is based on an extension of the RDD model called a
+DataFrame.
+
+==>A DataFrame contains an RDD of Row objects
+==>A DataFrame also knows the schema of its rows
+==>DataFrames
+store data in a more efficient manner than native RDDs, taking advantage of their
+schema.
+==>sql() method on the HiveContext or SQLContext.
+==>give it a name by registering it as a “temporary table”
+==>
+   val input = hiveCtx.jsonFile(inputFile)
+// Register the input schema RDD
+input.registerTempTable("tweets")
+// Select tweets based on the retweetCount
+val topTweets = hiveCtx.sql("SELECT text, retweetCount FROM tweets ORDER BY retweetCount LIMIT 10")
+
+Accessing the text column (also first column) in the topTweets
+DataFrame in Scala
+
+val topTweetText = topTweets.rdd().map(row => row.getString(0))
+
+
+Both loading data and executing queries return DataFrames.
+DataFrames are similar to tables in a traditional database.
+DataFrames also provide a way to access the RDD (by calling rdd()),
+
+==>DataFrames also provide a number of transformations that operate directly on the
+DataFrame
+
+
+caching SQL:
+works a bit differently.
+Spark is able to more efficiently store the data.
+To make sure that we cache using the memory efficient representation,rather than the full objects
+hiveCtx.cacheTable("tableName") method
+When caching a table Spark
+SQL represents the data in an in-memory columnar format
+This cached table will
+remain in memory only for the life of our driver program
+cache() method
+cacheTable().
+
+To cache or uncache a table
+simply run 
+CACHE TABLE tableName or 
+UNCACHE TABLE tableName. 
+This is most commonly used with command-line clients to the JDBC server.
+
+Spark SQL caching performance works:
+=======================================
+Spark SQL supports a number of structured data sources out of the box
+Spark SQL also has a DataSource API
+which allows others to integrate with Spark SQL.
+Some notable implementations of the DataSource API include Avro, Apache
+HBase, Elasticsearch, Cassandra, and more
+Apart from these data sources, you can also convert regular RDDs in your program
+to DataFrames by assigning them a schema
+==>it easy to write SQL queries
+even when your underlying data
+
+Hive load in Scala
+=====================
+val hiveCtx = new HiveContext(sc)
+val rows = hiveCtx.sql("SELECT key, value FROM mytable")
+val keys = rows.map(row => row.getInt(0))
+DataFrames can also be written back to Hive through the saveAsTable("tblName")
+function. This creates a persistent table
+
+# DataFrames Introduction
+
+## Create DataFrames
+
+You should arrange the downloaded JSON data before using Spark DataFrames.
+And You can also create dataframes from Hive, Parquet and RDD.
+
+You know, you can run a Spark shell by executing `$SPARK_HOME/bin/spark-shell`.
+
+If you want to treat JSON files, use `SQLContext.load`.
+And I recommend you to set their aliases at the same time.
+
+### On Local Machine
+
+```
+// Create a SQLContext (sc is an existing SparkContext)
+val context = new org.apache.spark.sql.SQLContext(sc)
+
+// Create a DataFrame for Github events
+var path = "file:///tmp/github-archive-data/*.json.gz"
+val event = context.load(path, "json").as('event)
+
+// Create a DataFrame for Github users
+path = "file:///tmp/github-archive-data/github-users.json"
+val user = context.load(path, "json").as('user)
+```
+
+You can show a schema by `printSchema`.
+
+```
+event.printSchema
+user.printSchema
+```
+
+### On Spark Cluster
+
+```
+// Create a SQLContext (sc is an existing SparkContext)
+val context = new org.apache.spark.sql.SQLContext(sc)
+
+// Create a DataFrame for Github events
+var path = "file:///mnt/github-archive-data/*.json.gz"
+val event = context.load(path, "json").as('event)
+
+// Create a DataFrame for Github users
+path = "file:///mnt/github-archive-data/github-users.json"
+val user = context.load(path, "json").as('user)
+```
+
+## Project (i.e. selecting some fields of a DataFrame)
+
+You can select a column by `dataframe("key")` or `dataframe.select("key")`.
+If you have select multiple columns, use `data.frame.select("key1", "key2")`.
+
+```
+// Select a clumn
+event("public").limit(2).show()
+
+// Use an alias for a column
+event.select('public as 'PUBLIC).limit(2).show()
+
+// Select multile columns with aliases
+event.select('public as 'PUBLIC, 'id as 'ID).limit(2).show()
+
+// Select nested columns with aliases
+event.select($"payload.size" as 'size, $"actor.id" as 'actor_id).limit(10).show()
+```
+
+## Filter
+
+You can filter the data with `filter()`.
+
+```
+// Filter by a condition
+user.filter("name is null").select('id, 'name).limit(5).show()
+user.filter("name is not null").select('id, 'name).limit(5).show()
+
+// Filter by a comblination of two conditions
+// These two expression are same
+event.filter("public = true and type = 'ForkEvent'").count
+event.filter("public = true").filter("type = 'ForkEvent'").count
+```
+
+## Aggregation
+
+```
+val countByType = event.groupBy("type").count()
+countByType.limit(5).show()
+
+val countByIdAndType = event.groupBy("id", "type").count()
+countByIdAndType.limit(10).foreach(println)
+```
+
+## Join
+
+You can join two data sets with `join`.
+And `where` allows you to set conditions to join them.
+
+```
+// Self join
+val x = user.as('x)
+val y = user.as('y)
+val join = x.join(y).where($"x.id" === $"y.id")
+join.select($"x.id", $"y.id").limit(10).show
+
+// Join Pull Request event data with user data
+val pr = event.filter('type === "PullRequestEvent").as('pr)
+val join = pr.join(user).where($"pr.payload.pull_request.user.id" === $"user.id")
+join.select($"pr.type", $"user.name", $"pr.created_at").limit(5).show
+```
+
+## UDFs
+
+You can define UDFs (User Define Functions) with `udf()`.
+
+```
+// Define User Defined Functions
+val toDate = udf((createdAt: String) => createdAt.substring(0, 10))
+val toTime = udf((createdAt: String) => createdAt.substring(11, 19))
+
+// Use the UDFs in select()
+event.select(toDate('created_at) as 'date, toTime('created_at) as 'time).limit(5).show
+```
+
+## Execute Spark SQL
+
+You can manipurate data with not only DataFrame but also Spark SQL.
+
+```
+// Register a temporary table for the schema
+event.registerTempTable("event")
+
+// Execute a Spark SQL
+context.sql("SELECT created_at, repo.name AS `repo.name`, actor.id, type FROM event WHERE type = 'PullRequestEvent'").limit(5).show()
+```
+========================================================
+Structured Streaming with Amazon Kinesis on Databricks:
+
+Kinesis Data Schema
+Configuration Parameters
+Authentication with AWS Kinesis
+Anatomy of a Kinesis Structured Streaming Application
+
+
+val jsonSchema = new StructType()
+        .add("battery_level", LongType)
+        .add("c02_level", LongType)
+        .add("cca3",StringType)
+        .add("cn", StringType)
+        .add("device_id", LongType)
+        .add("device_type", StringType)
+        .add("signal", LongType)
+        .add("ip", StringType)
+        .add("temp", LongType)
+        .add("timestamp", TimestampType)
+		
+		
+// read the data stream from Kinesis using the connector
+val kinesisDF = spark.readStream
+  .format("kinesis")
+  .option("streamName", "devices")
+  .option("initialPosition", "earliest")
+  .option("region", "us-west-2")
+  .option("awsAccessKey", awsAccessKey)
+  .option("awsSecretKey", awsSecretKey)
+  .load()
+
+  
+// extract data from the payload and use transformation to do
+// your analytics
+val dataDevicesDF = kinesisDF
+  .selectExpr("cast (data as STRING) jsonData"))
+  .select(from_json("jsonData", jsonSchema).as("devices"))
+  // explode into its equivalent DataFrame column names
+  .select("devices.*")
+  // filter out some devices with certain attribute values
+  .filter($"devices.temp" > 10 and $"devices.signal" > 15)
+  
+  
+
+
+
+val dataDevicesQuery = kinesisDF
+  .selectExpr("cast (data as STRING) jsonData"))
+  .select(from_json("jsonData", jsonSchema).as("devices"))
+ // explode into its equivalent DataFrame column names
+ .select("devices.*")
+ // filter out some devices with certain attribute values
+ .filter($"devices.temp" > 10 and $"devices.signal" > 15)
+ .writeStream
+ // write to Parquet file
+ .partitionBy("timestamp")
+ .format("parquet")
+ // specify the checkpoint location
+ .option("checkpointLocation", "/parquetCheckpoint")
+ // location where parquet partition files will be written
+ .start("/parquetDeviceTable")
+
+val out = in.writeStream
+  .format("parquet")
+  .option("path", "parquet-output-dir")
+  .option("checkpointLocation", "checkpoint-dir")
+  .trigger(ProcessingTime(5.seconds))
+  .outputMode(OutputMode.Append)
+  .start()
+  
+  // NOTE The source directory must exist
+// mkdir text-logs
+
+val df = spark.readStream
+  .format("text")
+  .option("maxFilesPerTrigger", 1)
+  .load("text-logs")
+  
+  / You should have input-json directory available
+val in = spark.readStream
+  .format("json")
+  .schema(schema)
+  .load("input-json")
+  
+  
+`maxFilesPerTrigger` option specifies the maximum number of files per trigger (batch). 
+It limits the file stream source to read the `maxFilesPerTrigger` number of files 
+specified at a time and hence enables rate limiting.
+
+It allows for a static set of files be used like a stream for testing
+ as the file set is processed `maxFilesPerTrigger` number of files at a time.
+ 
+ 
+ val fromKafkaTopic1ToConsole = spark.readStream
+  .format("kafka")
+  .option("subscribe", "topic1")
+  .option("kafka.bootstrap.servers", "localhost:9092")
+  .option("startingoffsets", "earliest")  // latest, earliest or JSON with {"topicA":{"part":offset,"p1":-1},"topicB":{"0":-2}}
+  .load
+  .select($"key" cast "string", $"value" cast "string") // deserialize records
+  .as[(String, String)]
+  .writeStream
+  .trigger(ProcessingTime(2.seconds))
+  .queryName("from-kafka-to-console")
+  .outputMode(OutputMode.Append)
+  .format("console")
+  .start
+
+fromKafkaTopic1ToConsole.stop
+
+
+
+// The following example executes a streaming query over CSV files
+// CSV format requires a schema before you can start the query
+
+// You could build your schema manually
+import org.apache.spark.sql.types._
+val schema = StructType(
+  StructField("id", LongType, false) ::
+  StructField("name", StringType, true) ::
+  StructField("city", StringType, true) :: Nil)
+
+  // Use the business object that describes the dataset
+case class Person(id: Long, name: String, city: String)
+
+val people = spark.
+  readStream.
+  schema(schema).
+  csv("in/*.csv").
+  as[Person]
+  
+  val population = people.
+  groupBy('city).
+  agg(count('city) as "population")
+  
+  
+  val populationStream = population.
+  writeStream.
+  queryName("textStream").
+  outputMode(Complete).
+  trigger(ProcessingTime(10.seconds)).
+  format("console").
+  start
+  
+  
+  val lines = spark.readStream
+  .format("socket")
+  .option("host", "localhost")
+  .option("port", 9999)
+  .load
+  .as[String]
+
+val words = lines.flatMap(_.split("\\W+"))
+val counter = words.groupBy("value").count
+val query = counter.writeStream
+  .outputMode(Complete)
+  .format("console")
+  .start
+
+query.stop
+
+
+
+
+
+  
+  
+  
+
+
